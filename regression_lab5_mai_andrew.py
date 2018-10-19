@@ -3,14 +3,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Lasso
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
 
 training_percentage = 0.3
 
-data = loader.load("C:\\Users\\Andrew\\PycharmProjects\\big_data_processing\\data_lab5.csv")
+data = loader.load("data_lab5.csv")
 data_expected = pd.read_csv(
-    "C:\\Users\\Andrew\\PycharmProjects\\big_data_processing\\data_lab5_expanded.csv")
+    "data_lab5_expanded.csv")
 
 print(len(data), len(data_expected))
 
@@ -42,7 +43,32 @@ print("Mean Absolute Error: ", mae)
 standard_scalar = StandardScaler()
 
 
-def poly_kfold_cv(x, y, p, k):
+def lasso_kfold_cv(x, y, p, k):
+    kframes = int(len(x) / k)
+    train_error = []
+    cv_error = []
+    lasso = Lasso(alpha=p)
+    for i in range(k):
+        index_start = i * kframes
+        index_end = x.shape[0] - kframes * (k - i - 1)
+        train_y = y[index_start:index_end]
+        train_x = x[index_start:index_end]
+        validation_x = x.drop(x.index[index_start:index_end])
+        validation_y = y.drop(y.index[index_start:index_end])
+        lasso.fit(X=train_x, y=train_y)
+        test_values = lasso.predict(validation_x)
+        train_values = lasso.predict(train_x)
+        train_error.append(np.mean(abs(train_values - train_y)))
+        cv_error.append(np.mean(abs(test_values - validation_y)))
+
+    lasso_predict(x, y, p)
+    train_error = np.mean(train_error)
+    cv_error = np.mean(cv_error)
+
+    return train_error, cv_error
+
+
+def ridge_kfold_cv(x, y, p, k):
     kframes = int(len(x) / k)
     train_error = []
     cv_error = []
@@ -61,19 +87,28 @@ def poly_kfold_cv(x, y, p, k):
         train_error.append(np.mean(abs(train_values - train_y)))
         cv_error.append(np.mean(abs(test_values - validation_y)))
 
-    predict(x, y, p)
+    ridge_predict(x, y, p)
     train_error = np.mean(train_error)
     cv_error = np.mean(cv_error)
     return train_error, cv_error
 
 
-def predict(x, y, p):
+def lasso_predict(x, y, p):
+    lasso = Lasso(alpha=p)
+    lasso.fit(x, y)
+    prediction = lasso.predict(test_features)
+
+    prediction_error = np.mean(abs(prediction - test_label))
+    print("MAE at lamda: 10^", p//10, prediction_error)
+
+
+def ridge_predict(x, y, p):
     ridge = Ridge(alpha=p)
     ridge.fit(x, y)
     prediction = ridge.predict(test_features)
 
     prediction_error = np.mean(abs(prediction - test_label))
-    print("MAE at lamda: 10^", np.sqrt(p), prediction_error)
+    print("MAE at lamda: 10^", p//10, prediction_error)
 
 
 standard_data = data_expected
@@ -85,21 +120,30 @@ standard_test = standard_data.loc[:, 'TARGET_D']
 scalar_fit = scalar.fit_transform(standard_set)
 standard_train = scalar_fit[:training_index]
 standard_label = standard_test[:training_index]
-lam = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+ridge_lam = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 standard_fit = pd.DataFrame(standard_train, columns=standard_set.columns)
 
 print(len(standard_fit), len(standard_label))
-training_error = []
-cross_validation_error = []
-for i in lam:
-    print("Processing lamda of 10^", i)
-    te, cve = poly_kfold_cv(standard_fit, standard_label, 10**i, 5)
-    training_error.append(te)
-    cross_validation_error.append(cve)
+ridge_training_error = []
+ridge_cross_validation_error = []
+for i in ridge_lam:
+    print("Ridge processing lamda of 10^", i)
+    te, cve = ridge_kfold_cv(standard_fit, standard_label, 10**i, 5)
+    ridge_training_error.append(te)
+    ridge_cross_validation_error.append(cve)
 
-plt.plot(lam, cross_validation_error, label="Cross Validation Error")
-plt.plot(lam, training_error, label="Training Error")
+plt.plot(ridge_lam, ridge_cross_validation_error, label="Cross Validation Error")
+plt.plot(ridge_lam, ridge_training_error, label="Training Error")
 plt.legend()
 plt.show()
+
+lasso_lam = [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75, 1, 1.25, 1.5, 1.75, 2]
+lasso_training_error = []
+lasso_validation_error = []
+
+for i in lasso_lam:
+    te, cve = lasso_kfold_cv(standard_fit, standard_label, 10**i, 5)
+    lasso_training_error.append(te)
+    lasso_validation_error.append(cve)
