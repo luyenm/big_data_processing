@@ -140,6 +140,8 @@ ridge_lam = [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 standard_fit = pd.DataFrame(standard_train, columns=standard_set.columns)
 
 print(len(standard_fit), len(standard_label))
+
+# Ridge Regression implementation.
 ridge_training_error = []
 ridge_cross_validation_error = []
 lowest_ridge_mae = 0
@@ -161,9 +163,9 @@ plt.ylabel("Mean error")
 plt.legend()
 plt.show()
 
-lasso_lam = [10**-2, 10**-1.75, 10**-1.5, 10**-1.25, 10**-1,
-             10**-0.75, 10**-0.50, 10**-0.25, 10**0, 10**0.25, 10**0.50, 10**0.75,
-             10**1, 10**1.25, 10**1.5, 10**1.75, 10**2]
+
+# Lasso Regression implementation
+lasso_lam = [-2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.50, 0.75, 1, 1.25, 1.5, 1.75, 2]
 lasso_training_error = []
 lasso_validation_error = []
 lowest_lasso_mae = 0
@@ -172,7 +174,7 @@ ideal_lasso_lamda = 0
 
 for i in lasso_lam:
     print("Lasso processing lamda of 10^", i)
-    te, cve, mean = lasso_kfold_cv(standard_fit, standard_label, i, 5)
+    te, cve, mean = lasso_kfold_cv(standard_fit, standard_label, 10**i, 5)
     lasso_training_error.append(te)
     lasso_validation_error.append(cve)
     if lowest_lasso_mae == 0 or lowest_lasso_mae > mean:
